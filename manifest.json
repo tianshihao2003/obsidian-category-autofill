@@ -1,0 +1,9 @@
+{
+	"id": "category-autofill",
+	"name": "Category Autofill",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "自动把笔记的 category 属性填充为所在文件夹的名称",
+	"author": "dumplingandcake",
+	"isDesktopOnly": false
+}

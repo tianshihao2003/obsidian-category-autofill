@@ -1,0 +1,20 @@
+{
+	"name": "obsidian-category-autofill",
+	"version": "1.0.0",
+	"description": "自动把笔记的 category 属性填充为所在文件夹的名称",
+	"type": "module",
+	"scripts": {
+		"dev": "node esbuild.config.mjs",
+		"build": "pnpm typecheck && node esbuild.config.mjs production",
+		"typecheck": "tsc --noEmit",
+		"test": "node --test logic.test.ts"
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.0",
+		"builtin-modules": "^5.0.0",
+		"esbuild": "^0.24.2",
+		"obsidian": "^1.8.7",
+		"tslib": "^2.8.1",
+		"typescript": "^5.7.3"
+	}
+}
