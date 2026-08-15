@@ -5,7 +5,9 @@ import {
 	isEmptyCategory,
 	isHiddenPath,
 	isInBaseFolder,
+	resolveTemplate,
 	shouldUpdateCategory,
+	todayString,
 } from "./logic.ts";
 
 describe("isHiddenPath", () => {
@@ -76,6 +78,82 @@ describe("isInBaseFolder", () => {
 
 	it("首尾斜杠会被规范化", () => {
 		assert.equal(isInBaseFolder("content/posts/x.md", "/content/posts/"), true);
+	});
+});
+
+describe("todayString", () => {
+	it("返回 YYYY-MM-DD 格式的本地日期", () => {
+		assert.match(todayString(), /^\d{4}-\d{2}-\d{2}$/);
+	});
+});
+
+describe("resolveTemplate", () => {
+	const ctx = { title: "我的新文章", category: "技术分享", date: "2026-08-15" };
+
+	it("默认模板：五个属性类型正确", () => {
+		const result = resolveTemplate(
+			[
+				"title: {{title}}",
+				"published: {{date}}",
+				"tags: []",
+				"category: {{category}}",
+				'description: ""',
+			].join("\n"),
+			ctx,
+		);
+		assert.deepEqual(result, {
+			title: "我的新文章",
+			published: "2026-08-15",
+			tags: [],
+			category: "技术分享",
+			description: "",
+		});
+	});
+
+	it("占位符：{{title}}/{{category}}/{{date}} 被替换", () => {
+		const result = resolveTemplate("title: {{title}}\ncategory: {{category}}", ctx);
+		assert.equal(result.title, "我的新文章");
+		assert.equal(result.category, "技术分享");
+	});
+
+	it("字面量解析：布尔、数组、数字、引号字符串、普通字符串", () => {
+		const result = resolveTemplate(
+			[
+				"draft: false",
+				"pinned: true",
+				"order: 3",
+				'tags: ["a", "b"]',
+				"empty: []",
+				"'quoted': '值'",
+				"plain: 随便写的文字",
+			].join("\n"),
+			ctx,
+		);
+		assert.equal(result.draft, false);
+		assert.equal(result.pinned, true);
+		assert.equal(result.order, 3);
+		assert.deepEqual(result.tags, ["a", "b"]);
+		assert.deepEqual(result.empty, []);
+		assert.equal(result["quoted"], "值");
+		assert.equal(result.plain, "随便写的文字");
+	});
+
+	it("无效行被跳过：空行、注释、无冒号、空键", () => {
+		const result = resolveTemplate(
+			["", "# 注释", "没有冒号的行", ": 空键", "ok: 1"].join("\n"),
+			ctx,
+		);
+		assert.deepEqual(result, { ok: 1 });
+	});
+
+	it("重复键取最后一行", () => {
+		const result = resolveTemplate("title: 第一个\n\ntitle: 第二个", ctx);
+		assert.equal(result.title, "第二个");
+	});
+
+	it("未知占位符按字面字符串处理", () => {
+		const result = resolveTemplate("note: {{unknown}}", ctx);
+		assert.equal(result.note, "{{unknown}}");
 	});
 });
 

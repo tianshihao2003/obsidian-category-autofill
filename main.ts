@@ -1,16 +1,36 @@
 import { Notice, Plugin, PluginSettingTab, Setting, TAbstractFile, TFile, TFolder } from "obsidian";
 import type { App } from "obsidian";
-import { getTargetCategory, isInBaseFolder, shouldUpdateCategory } from "./logic.ts";
+import {
+	getTargetCategory,
+	isInBaseFolder,
+	resolveTemplate,
+	shouldUpdateCategory,
+	todayString,
+} from "./logic.ts";
 
 interface CategoryAutofillSettings {
 	overwriteExisting: boolean;
 	/** 只处理该目录内的文件（相对库根目录，空值表示整个库）。 */
 	baseFolder: string;
+	/** 新建文章时是否自动添加属性。 */
+	autoAddProperties: boolean;
+	/** 新建文章属性模板，每行一个「属性名: 值」。 */
+	newFileTemplate: string;
 }
+
+const DEFAULT_TEMPLATE = [
+	"title: {{title}}",
+	"published: {{date}}",
+	"tags: []",
+	"category: {{category}}",
+	'description: ""',
+].join("\n");
 
 const DEFAULT_SETTINGS: CategoryAutofillSettings = {
 	overwriteExisting: true,
 	baseFolder: "content/posts",
+	autoAddProperties: true,
+	newFileTemplate: DEFAULT_TEMPLATE,
 };
 
 /** 防抖时间（毫秒）：同一路径在此窗口内的重复事件只处理一次。 */
@@ -131,8 +151,51 @@ export default class CategoryAutofillPlugin extends Plugin {
 	private handleCreate(file: TAbstractFile) {
 		if (!(file instanceof TFile)) return;
 		this.schedule(file.path, () => {
-			void this.updateCategory(file);
+			void this.applyCreateTemplate(file);
 		});
+	}
+
+	/**
+	 * 新建文章时初始化属性：
+	 * 1. 模板属性只补缺失的（不覆盖已有值，安全）；
+	 * 2. category 遵循「覆盖已有值」设置同步为父文件夹名。
+	 */
+	async applyCreateTemplate(file: TFile): Promise<UpdateResult> {
+		const target = this.targetFor(file);
+		if (target === null) return "skipped";
+
+		try {
+			let changed = false;
+			await this.app.fileManager.processFrontMatter(file, (frontmatter) => {
+				if (this.settings.autoAddProperties) {
+					const props = resolveTemplate(this.settings.newFileTemplate, {
+						title: file.basename,
+						category: target,
+						date: todayString(),
+					});
+					for (const [key, value] of Object.entries(props)) {
+						if (frontmatter[key] === undefined || frontmatter[key] === null) {
+							frontmatter[key] = value;
+							changed = true;
+						}
+					}
+				}
+				if (
+					shouldUpdateCategory(
+						frontmatter.category,
+						target,
+						this.settings.overwriteExisting,
+					)
+				) {
+					frontmatter.category = target;
+					changed = true;
+				}
+			});
+			return changed ? "updated" : "skipped";
+		} catch (error) {
+			console.error(`[category-autofill] 初始化 ${file.path} 失败：`, error);
+			return "failed";
+		}
 	}
 
 	private handleRename(file: TAbstractFile, _oldPath: string) {
@@ -215,6 +278,33 @@ class CategoryAutofillSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.overwriteExisting)
 					.onChange(async (value) => {
 						this.plugin.settings.overwriteExisting = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("新建文章时自动添加属性")
+			.setDesc("在文章根目录内新建 Markdown 文件时，自动补上模板中缺失的属性。")
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.autoAddProperties)
+					.onChange(async (value) => {
+						this.plugin.settings.autoAddProperties = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName("新建文章属性模板")
+			.setDesc(
+				"每行一个「属性名: 值」，只补缺失的属性。占位符：{{title}} 文件名、{{category}} 父文件夹名、{{date}} 今天日期。",
+			)
+			.addTextArea((text) =>
+				text
+					.setPlaceholder("title: {{title}}")
+					.setValue(this.plugin.settings.newFileTemplate)
+					.onChange(async (value) => {
+						this.plugin.settings.newFileTemplate = value;
 						await this.plugin.saveSettings();
 					}),
 			);
