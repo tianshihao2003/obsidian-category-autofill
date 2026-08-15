@@ -342,7 +342,7 @@ export function shouldUpdateCategory(
 - [ ] **Step 4: 运行测试确认通过**
 
 Run: `pnpm test`
-Expected: PASS，15 个用例全绿（`# pass 15`），退出 0。
+Expected: PASS，11 个用例全绿（`# pass 11`），退出 0。
 
 - [ ] **Step 5: 提交**
 
@@ -686,7 +686,7 @@ pnpm test         # node:test 单元测试（纯逻辑模块）
 
 - [ ] **Step 2: 最终验证（三项全跑）**
 
-Run: `pnpm test` → Expected: PASS，15 个用例全绿。
+Run: `pnpm test` → Expected: PASS，11 个用例全绿。
 Run: `pnpm typecheck` → Expected: 无输出，退出 0。
 Run: `pnpm build` → Expected: typecheck 通过 + esbuild 产出 main.js，退出 0。
 
