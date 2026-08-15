@@ -22,6 +22,12 @@
 2. 在库目录 `.obsidian/plugins/` 下新建文件夹 `category-autofill`，拷入 `main.js` 和 `manifest.json`。
 3. 重启 Obsidian，在「设置 → 第三方插件」中启用「Category Autofill」。
 
+### 自动拷贝（已配置）
+
+构建脚本（`esbuild.config.mjs`）内置了自动拷贝：每次 `pnpm build` 或 `pnpm dev`（监听模式，改代码后自动重新构建）都会把 `main.js`、`manifest.json`、`versions.json` 拷入 `VAULT_PATHS` 数组里列出的每个库的 `.obsidian/plugins/category-autofill/` 目录。当前配置的目标库是博客仓库的 `src` 库；要增加或更换库，修改 `esbuild.config.mjs` 顶部的 `VAULT_PATHS` 数组即可。
+
+注意：拷贝后需要在 Obsidian 里「重新加载应用」（命令面板搜 reload）或重启，改动才会生效。
+
 ## 验收清单
 
 1. 在子文件夹新建 md 文件 → category 自动填为文件夹名。
