@@ -14,6 +14,18 @@ export function isEmptyCategory(value: unknown): boolean {
 }
 
 /**
+ * 判断路径是否在指定的根目录内。
+ * baseFolder 为空或 "/" 表示不限制（整个库）；
+ * 首尾斜杠会被规范化；同前缀目录（如 posts2）不会误匹配。
+ */
+export function isInBaseFolder(path: string, baseFolder: string): boolean {
+	const base = baseFolder.trim().replace(/^\/+|\/+$/g, "");
+	if (base === "") return true;
+	if (path === base) return true;
+	return path.startsWith(`${base}/`);
+}
+
+/**
  * 计算该文件应填入的 category 值。
  * 返回 null 表示跳过：库根目录文件或隐藏目录中的文件。
  */

@@ -1,13 +1,16 @@
 import { Notice, Plugin, PluginSettingTab, Setting, TAbstractFile, TFile, TFolder } from "obsidian";
 import type { App } from "obsidian";
-import { getTargetCategory, shouldUpdateCategory } from "./logic.ts";
+import { getTargetCategory, isInBaseFolder, shouldUpdateCategory } from "./logic.ts";
 
 interface CategoryAutofillSettings {
 	overwriteExisting: boolean;
+	/** 只处理该目录内的文件（相对库根目录，空值表示整个库）。 */
+	baseFolder: string;
 }
 
 const DEFAULT_SETTINGS: CategoryAutofillSettings = {
 	overwriteExisting: true,
+	baseFolder: "content/posts",
 };
 
 /** 防抖时间（毫秒）：同一路径在此窗口内的重复事件只处理一次。 */
@@ -62,6 +65,7 @@ export default class CategoryAutofillPlugin extends Plugin {
 	/** 计算该文件的 category 目标值；需要跳过时返回 null。 */
 	private targetFor(file: TFile): string | null {
 		if (file.extension !== "md") return null;
+		if (!isInBaseFolder(file.path, this.settings.baseFolder)) return null;
 		const parent = file.parent;
 		if (!parent) return null;
 		return getTargetCategory(file.path, parent.name, parent.isRoot());
@@ -185,6 +189,21 @@ class CategoryAutofillSettingTab extends PluginSettingTab {
 	display() {
 		const { containerEl } = this;
 		containerEl.empty();
+
+		new Setting(containerEl)
+			.setName("文章根目录")
+			.setDesc(
+				"只处理该目录内的 Markdown 文件（相对库根目录的路径，如 content/posts）。留空表示整个库。",
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder("content/posts")
+					.setValue(this.plugin.settings.baseFolder)
+					.onChange(async (value) => {
+						this.plugin.settings.baseFolder = value.trim();
+						await this.plugin.saveSettings();
+					}),
+			);
 
 		new Setting(containerEl)
 			.setName("覆盖已有的 category 值")

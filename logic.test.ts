@@ -4,6 +4,7 @@ import {
 	getTargetCategory,
 	isEmptyCategory,
 	isHiddenPath,
+	isInBaseFolder,
 	shouldUpdateCategory,
 } from "./logic.ts";
 
@@ -50,6 +51,31 @@ describe("getTargetCategory", () => {
 
 	it("子文件夹文件返回直接父文件夹名", () => {
 		assert.equal(getTargetCategory("技术分享/前端/x.md", "前端", false), "前端");
+	});
+});
+
+describe("isInBaseFolder", () => {
+	it("根目录内的文件返回 true（含恰好位于根目录的文件）", () => {
+		assert.equal(
+			isInBaseFolder("content/posts/技术分享/x.md", "content/posts"),
+			true,
+		);
+		assert.equal(isInBaseFolder("content/posts/x.md", "content/posts"), true);
+	});
+
+	it("根目录外的文件返回 false（不误匹配同前缀目录）", () => {
+		assert.equal(isInBaseFolder("content/album/x.md", "content/posts"), false);
+		assert.equal(isInBaseFolder("content/posts2/x.md", "content/posts"), false);
+		assert.equal(isInBaseFolder("x.md", "content/posts"), false);
+	});
+
+	it("空值表示不限制（整个库）", () => {
+		assert.equal(isInBaseFolder("任意/路径/x.md", ""), true);
+		assert.equal(isInBaseFolder("任意/路径/x.md", "   "), true);
+	});
+
+	it("首尾斜杠会被规范化", () => {
+		assert.equal(isInBaseFolder("content/posts/x.md", "/content/posts/"), true);
 	});
 });
 
