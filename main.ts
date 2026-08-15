@@ -34,6 +34,14 @@ export default class CategoryAutofillPlugin extends Plugin {
 		);
 
 		this.addSettingTab(new CategoryAutofillSettingTab(this.app, this));
+
+		this.addCommand({
+			id: "fill-all-categories",
+			name: "自动填充 category（全库）",
+			callback: () => {
+				void this.runBatch();
+			},
+		});
 	}
 
 	onunload() {
